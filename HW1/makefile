@@ -12,7 +12,7 @@ objects = obj/loader.o \
           obj/hardwarecommunication/port.o \
           obj/hardwarecommunication/interruptstubs.o \
           obj/hardwarecommunication/interrupts.o \
-          obj/multitasking.o \
+          obj/multiprocessing.o \
           obj/hardwarecommunication/pci.o \
           obj/drivers/keyboard.o \
           obj/drivers/mouse.o \
@@ -20,7 +20,7 @@ objects = obj/loader.o \
           obj/gui/widget.o \
           obj/gui/window.o \
           obj/gui/desktop.o \
-          obj/kernel.o
+          obj/kernel.o 
 
 
 run: mykernel.iso
