@@ -20,7 +20,7 @@ objects = obj/loader.o \
           obj/gui/widget.o \
           obj/gui/window.o \
           obj/gui/desktop.o \
-          obj/kernel.o 
+          obj/kernel.o
 
 
 run: mykernel.iso

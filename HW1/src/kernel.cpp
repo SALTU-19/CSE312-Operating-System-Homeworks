@@ -11,7 +11,9 @@
 #include <gui/window.h>
 #include <multiprocessing.h>
 
+
 // #define GRAPHICSMODE
+
 
 using namespace myos;
 using namespace myos::common;
@@ -21,94 +23,38 @@ using namespace myos::gui;
 
 bool flag[2] = {false, false};
 int turn;
-int counter = 0;
-int pidA = 0;
-int pidB = 0;
 
-void printf(char *str)
+void printf(char* str)
 {
-    static uint16_t *VideoMemory = (uint16_t *)0xb8000;
+    static uint16_t* VideoMemory = (uint16_t*)0xb8000;
 
-    static uint8_t x = 0, y = 0;
+    static uint8_t x=0,y=0;
 
-    for (int i = 0; str[i] != '\0'; ++i)
+    for(int i = 0; str[i] != '\0'; ++i)
     {
-        switch (str[i])
+        switch(str[i])
         {
-        case '\n':
-            x = 0;
-            y++;
-            break;
-        default:
-            VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | str[i];
-            x++;
-            break;
+            case '\n':
+                x = 0;
+                y++;
+                break;
+            default:
+                VideoMemory[80*y+x] = (VideoMemory[80*y+x] & 0xFF00) | str[i];
+                x++;
+                break;
         }
 
-        if (x >= 80)
-        {
-            x = 0;
-            y++;
-        }
-
-        if (y >= 25)
-        {
-            for (y = 0; y < 25; y++)
-                for (x = 0; x < 80; x++)
-                    VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | ' ';
-            x = 0;
-            y = 0;
-        }
-    }
-}
-void printint(int n)
-{
-    static uint16_t *VideoMemory = (uint16_t *)0xb8000;
-    static uint8_t x = 0, y = 0;
-    char buf[32];
-    int i = 0;
-
-    if (n == 0)
-    {
-        buf[0] = '0';
-        i = 1;
-    }
-    else
-    {
-        bool negative = false;
-        if (n < 0)
-        {
-            negative = true;
-            n = -n;
-        }
-
-        while (n > 0)
-        {
-            buf[i++] = '0' + (n % 10);
-            n /= 10;
-        }
-
-        if (negative)
-            buf[i++] = '-';
-    }
-
-    while (i > 0)
-    {
-        i--;
-        VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | buf[i];
-        x++;
-
-        if (x >= 80)
+        if(x >= 80)
         {
             x = 0;
             y++;
         }
 
-        if (y >= 25)
+        if(y >= 25)
         {
-            for (y = 0; y < 25; y++)
-                for (x = 0; x < 80; x++)
-                    VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0xFF00) | ' ';
+            for(y = 0; y < 25; y++)
+                for(x = 0; x < 80; x++)
+                    VideoMemory[80*y+x] = (VideoMemory[80*y+x] & 0xFF00) | ' ';
             x = 0;
             y = 0;
         }
@@ -117,19 +63,22 @@ void printint(int n)
 
 void printfHex(uint8_t key)
 {
-    char *foo = "00";
-    char *hex = "0123456789ABCDEF";
+    char* foo = "00";
+    char* hex = "0123456789ABCDEF";
     foo[0] = hex[(key >> 4) & 0xF];
     foo[1] = hex[key & 0xF];
     printf(foo);
 }
+
+
+
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
 {
 public:
     void OnKeyDown(char c)
     {
-        char *foo = " ";
+        char* foo = " ";
         foo[0] = c;
         printf(foo);
     }
@@ -138,52 +87,57 @@ public:
 class MouseToConsole : public MouseEventHandler
 {
     int8_t x, y;
-
 public:
+    
     MouseToConsole()
     {
-        uint16_t *VideoMemory = (uint16_t *)0xb8000;
+        uint16_t* VideoMemory = (uint16_t*)0xb8000;
         x = 40;
         y = 12;
-        VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0x0F00) << 4 | (VideoMemory[80 * y + x] & 0xF000) >> 4 | (VideoMemory[80 * y + x] & 0x00FF);
+        VideoMemory[80*y+x] = (VideoMemory[80*y+x] & 0x0F00) << 4
+                            | (VideoMemory[80*y+x] & 0xF000) >> 4
+                            | (VideoMemory[80*y+x] & 0x00FF);        
     }
-
+    
     virtual void OnMouseMove(int xoffset, int yoffset)
     {
-        static uint16_t *VideoMemory = (uint16_t *)0xb8000;
-        VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0x0F00) << 4 | (VideoMemory[80 * y + x] & 0xF000) >> 4 | (VideoMemory[80 * y + x] & 0x00FF);
+        static uint16_t* VideoMemory = (uint16_t*)0xb8000;
+        VideoMemory[80*y+x] = (VideoMemory[80*y+x] & 0x0F00) << 4
+                            | (VideoMemory[80*y+x] & 0xF000) >> 4
+                            | (VideoMemory[80*y+x] & 0x00FF);
 
         x += xoffset;
-        if (x >= 80)
-            x = 79;
-        if (x < 0)
-            x = 0;
+        if(x >= 80) x = 79;
+        if(x < 0) x = 0;
         y += yoffset;
-        if (y >= 25)
-            y = 24;
-        if (y < 0)
-            y = 0;
+        if(y >= 25) y = 24;
+        if(y < 0) y = 0;
 
-        VideoMemory[80 * y + x] = (VideoMemory[80 * y + x] & 0x0F00) << 4 | (VideoMemory[80 * y + x] & 0xF000) >> 4 | (VideoMemory[80 * y + x] & 0x00FF);
+        VideoMemory[80*y+x] = (VideoMemory[80*y+x] & 0x0F00) << 4
+                            | (VideoMemory[80*y+x] & 0xF000) >> 4
+                            | (VideoMemory[80*y+x] & 0x00FF);
     }
+    
 };
+
+
+
+
 
 void processA()
 {
 
-    while (1)
-    {
+    while(1){
         flag[0] = true;
         turn = 1;
         while (flag[1] == true && turn == 1)
         {
-            // busy wait
+             // busy wait
         }
-
+        
         // critical section
-        printf("Coskun");
-        printint(pidA);
-        printf("\n");
+        printf("Coskun loves ");
+        //printf("\t");
         // end of critical section
         flag[0] = false;
     }
@@ -191,96 +145,103 @@ void processA()
 void processB()
 {
 
-    while (1)
-    {
+    while(1){
         flag[1] = true;
         turn = 0;
         while (flag[0] == true && turn == 0)
         {
-            // busy wait
+             // busy wait
         }
         // critical section
-        printf("Baba ");
-        printint(pidB);
+        printf("Reyhan");
         printf("\n");
         // end of critical section
         flag[1] = false;
+            
     }
+
 }
+
+
+
+
+
 
 typedef void (*constructor)();
 extern "C" constructor start_ctors;
 extern "C" constructor end_ctors;
 extern "C" void callConstructors()
 {
-    for (constructor *i = &start_ctors; i != &end_ctors; i++)
+    for(constructor* i = &start_ctors; i != &end_ctors; i++)
         (*i)();
 }
 
-extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot_magic*/)
+
+
+extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*multiboot_magic*/)
 {
     printf("Hello World! --- http://www.AlgorithMan.de\n");
 
     GlobalDescriptorTable gdt;
-
+    
     ProcessManager processManager;
-    Process process1(&gdt, processA, 0);
-    Process process2(&gdt, processB, 0);
-    pidA = process1.GetPID();
-    pidB = process2.GetPID();
+    Process process1(&gdt, processA);
+    Process process2(&gdt, processB);
     processManager.AddProcess(&process1);
     processManager.AddProcess(&process2);
-
+    
     InterruptManager interrupts(0x20, &gdt, &processManager);
-
+    
     printf("Initializing Hardware, Stage 1\n");
-
-#ifdef GRAPHICSMODE
-    Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
-#endif
-
+    
+    #ifdef GRAPHICSMODE
+        Desktop desktop(320,200, 0x00,0x00,0xA8);
+    #endif
+    
     DriverManager drvManager;
+    
+        #ifdef GRAPHICSMODE
+            KeyboardDriver keyboard(&interrupts, &desktop);
+        #else
+            PrintfKeyboardEventHandler kbhandler;
+            KeyboardDriver keyboard(&interrupts, &kbhandler);
+        #endif
+        drvManager.AddDriver(&keyboard);
+        
+    
+        #ifdef GRAPHICSMODE
+            MouseDriver mouse(&interrupts, &desktop);
+        #else
+            MouseToConsole mousehandler;
+            MouseDriver mouse(&interrupts, &mousehandler);
+        #endif
+        drvManager.AddDriver(&mouse);
+        
+        PeripheralComponentInterconnectController PCIController;
+        PCIController.SelectDrivers(&drvManager, &interrupts);
 
-#ifdef GRAPHICSMODE
-    KeyboardDriver keyboard(&interrupts, &desktop);
-#else
-    PrintfKeyboardEventHandler kbhandler;
-    KeyboardDriver keyboard(&interrupts, &kbhandler);
-#endif
-    drvManager.AddDriver(&keyboard);
-
-#ifdef GRAPHICSMODE
-    MouseDriver mouse(&interrupts, &desktop);
-#else
-    MouseToConsole mousehandler;
-    MouseDriver mouse(&interrupts, &mousehandler);
-#endif
-    drvManager.AddDriver(&mouse);
-
-    PeripheralComponentInterconnectController PCIController;
-    PCIController.SelectDrivers(&drvManager, &interrupts);
-
-    VideoGraphicsArray vga;
-
+        VideoGraphicsArray vga;
+        
     printf("Initializing Hardware, Stage 2\n");
-    drvManager.ActivateAll();
-
+        drvManager.ActivateAll();
+        
     printf("Initializing Hardware, Stage 3\n");
 
-#ifdef GRAPHICSMODE
-    vga.SetMode(320, 200, 8);
-    Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
-    desktop.AddChild(&win1);
-    Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
-    desktop.AddChild(&win2);
-#endif
+    #ifdef GRAPHICSMODE
+        vga.SetMode(320,200,8);
+        Window win1(&desktop, 10,10,20,20, 0xA8,0x00,0x00);
+        desktop.AddChild(&win1);
+        Window win2(&desktop, 40,15,30,30, 0x00,0xA8,0x00);
+        desktop.AddChild(&win2);
+    #endif
+
 
     interrupts.Activate();
-
-    while (1)
+    
+    while(1)
     {
-#ifdef GRAPHICSMODE
-        desktop.Draw(&vga);
-#endif
+        #ifdef GRAPHICSMODE
+            desktop.Draw(&vga);
+        #endif
     }
 }

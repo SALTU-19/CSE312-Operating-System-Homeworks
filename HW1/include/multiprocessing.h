@@ -1,4 +1,4 @@
-
+ 
 #ifndef __MYOS__MULTIPROCESSING_H
 #define __MYOS__MULTIPROCESSING_H
 
@@ -6,12 +6,12 @@
 #include <gdt.h>
 
 #define PROCESS_STATE_RUNNING 0
-#define PROCESS_STATE_WAITING 1
-#define PROCESS_STATE_READY 2
+#define PROCESS_STATE_READY 1
+#define PROCESS_STATE_BLOCKED 2
 
 namespace myos
 {
-
+    
     struct CPUState
     {
         common::uint32_t eax;
@@ -35,69 +35,47 @@ namespace myos
         common::uint32_t cs;
         common::uint32_t eflags;
         common::uint32_t esp;
-        common::uint32_t ss;
+        common::uint32_t ss;        
     } __attribute__((packed));
-
+    
+    
     class Process
     {
-        friend class ProcessManager;
-
+    friend class ProcessManager;
     private:
         common::uint8_t stack[4096]; // 4 KiB
-        CPUState *cpustate;
+        CPUState* cpustate;
         int pid;
         int ppid;
         int state;
         static int nextpid;
-
     public:
-        Process(GlobalDescriptorTable *gdt, void entrypoint(), int ppid);
+        Process(GlobalDescriptorTable *gdt, void entrypoint());
+        Process(GlobalDescriptorTable *gdt, void entrypoint(),int ppid);
         ~Process();
-        int GetPID();
-    };
-
-    class ProcessManager
-    {
-    private:
-        Process *processs[256];
-        int numProcesss;
-        int currentProcess;
-
-    public:
-        ProcessManager();
-        ~ProcessManager();
-        bool AddProcess(Process *process);
-        CPUState *Schedule(CPUState *cpustate);
-    };
-
-    class ProcessControlBlock
-    {
-    private:
-        int pid;
-        int ppid;
-        int state;
-        CPUState *cpustate;
-
-    public:
-        ProcessControlBlock(int pid, int ppid, int state, CPUState *cpustate);
-        ~ProcessControlBlock();
         int GetPID();
         int GetPPID();
         int GetState();
-        CPUState *GetCPUState();
+        CPUState* GetCPUState();
     };
-    class ProcessTable
+    
+    
+    class ProcessManager
     {
     private:
-        ProcessControlBlock *processControlBlocks[256];
-        int numProcessControlBlocks;
-
+        Process* processs[256];
+        int numProcesss;
+        int currentProcess;
     public:
-        ProcessTable();
-        ~ProcessTable();
-        bool AddProcessControlBlock(ProcessControlBlock *pcb);
-        ProcessControlBlock *GetProcessControlBlock(int pid);
+        ProcessManager();
+        ~ProcessManager();
+        bool AddProcess(Process* process);
+        CPUState* Schedule(CPUState* cpustate);
     };
+    
+    
+    
 }
+
 
 #endif
