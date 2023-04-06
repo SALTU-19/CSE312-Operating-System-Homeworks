@@ -37,6 +37,34 @@ Process::Process(GlobalDescriptorTable *gdt, void entrypoint())
     : Process(gdt, entrypoint, 0)
 {
 }
+Process::Process(CPUState *cpustate, int ppid)
+    : pid(nextpid++), ppid(ppid), state(PROCESS_STATE_READY), cpustate(cpustate)
+{
+    // this->cpustate = (CPUState *)(stack + 4096 - sizeof(CPUState));
+    // this->cpustate->eax = 0;
+    // this->cpustate->ebx = 0;
+    // this->cpustate->ecx = 0;
+    // this->cpustate->edx = 0;
+
+    // this->cpustate->esi = 0;
+    // this->cpustate->edi = 0;
+    // this->cpustate->ebp = 0;
+
+    // /*
+    // this->cpustate -> gs = 0;
+    // this->cpustate -> fs = 0;
+    // this->cpustate -> es = 0;
+    // this->cpustate -> ds = 0;
+    // */
+
+    // // this->cpustate -> error = 0;
+
+    // // this->cpustate -> esp = ;
+    // this->cpustate->eip = (uint32_t)cpustate->eip;
+    // this->cpustate->cs = cpustate->cs;
+    // // cpustate -> ss = ;
+    // this->cpustate->eflags = 0x202;
+}
 
 Process::~Process()
 {
@@ -71,9 +99,14 @@ ProcessManager::~ProcessManager()
 
 bool ProcessManager::AddProcess(Process *process)
 {
+    // ProcessControlBlock *pcb;
+    // pcb->cpustate = process->cpustate;
+    // pcb->pid = process->pid;
+    // pcb->ppid = process->ppid;
+    // pcb->state = process->state;
     if (numProcesss >= 256)
         return false;
-    processs[numProcesss++] = process;
+    processes[numProcesss++] = process;
     return true;
 }
 
@@ -84,59 +117,15 @@ CPUState *ProcessManager::Schedule(CPUState *cpustate)
 
     if (currentProcess >= 0)
     {
-        processs[currentProcess]->cpustate = cpustate;
-        processs[currentProcess - 1]->state = PROCESS_STATE_BLOCKED;
-        processs[currentProcess]->state = PROCESS_STATE_RUNNING;
-        processs[currentProcess + 1]->state = PROCESS_STATE_READY;
+        processes[currentProcess]->cpustate = cpustate;
     }
     if (++currentProcess >= numProcesss)
     {
         currentProcess %= numProcesss;
     }
-    return processs[currentProcess]->cpustate;
+    return processes[currentProcess]->cpustate;
 }
-
-ProcessTable::ProcessTable()
+Process *ProcessManager::GetCurrentProcess()
 {
-    numProcesss = 0;
-}
-ProcessTable::~ProcessTable()
-{
-}
-bool ProcessTable::AddProcess(Process *process)
-{
-    int pid = process->GetPID();
-    int ppid = process->GetPPID();
-    int state = process->GetState();
-    CPUState *cpustate = process->GetCPUState();
-    ProcessControlBlock *pcb;
-    pcb->cpustate = cpustate;
-    pcb->pid = pid;
-    pcb->ppid = ppid;
-    pcb->state = state;
-    if (numProcesss >= 256)
-        return false;
-    processsControlBlocks[numProcesss++] = pcb;
-    return true;
-}
-int ProcessTable::GetProcessState(int pid)
-{
-    for (int i = 0; i < numProcesss; i++)
-    {
-        if (processsControlBlocks[i]->pid == pid)
-            return processsControlBlocks[i]->state;
-    }
-    return -1;
-}
-void ProcessTable::SetProcessState(int pid, int state)
-{
-    for (int i = 0; i < numProcesss; i++)
-    {
-        if (processsControlBlocks[i]->pid == pid)
-            processsControlBlocks[i]->state = state;
-    }
-}
-int ProcessTable::GetNumProcesss()
-{
-    return numProcesss;
+    return processes[currentProcess];
 }

@@ -10,6 +10,7 @@
 #include <gui/desktop.h>
 #include <gui/window.h>
 #include <multiprocessing.h>
+#include <syscall.h>
 
 // #define GRAPHICSMODE
 
@@ -23,6 +24,8 @@ bool flag[2] = {false, false};
 int turn;
 int process1State = 0;
 int process2State = 0;
+ProcessManager processManager;
+GlobalDescriptorTable gdt;
 void printf(char *str)
 {
     static uint16_t *VideoMemory = (uint16_t *)0xb8000;
@@ -69,6 +72,22 @@ void printfHex(uint8_t key)
     printf(foo);
 }
 
+int fork()
+{
+    Process *parentProcess = processManager.GetCurrentProcess();
+    CPUState *parentCPUState = (CPUState *)parentProcess->GetCPUState();
+    Process childProcess(parentCPUState, parentProcess->GetPID());
+
+    processManager.AddProcess(&childProcess);
+
+    return childProcess.GetPID();
+}
+
+void sysfork()
+{
+    asm("int $0x80" : : "a"(2));
+}
+
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
 {
 public:
@@ -113,9 +132,16 @@ public:
     }
 };
 
+void sysprintf(char *str)
+{
+    asm("int $0x80"
+        :
+        : "a"(4), "b"(str));
+}
+
 void processA()
 {
-
+    sysfork();
     while (1)
     {
         flag[0] = true;
@@ -126,9 +152,8 @@ void processA()
         }
 
         // critical section
-        char a = process2State + '0';
-        printf(&a);
-        printf("  ");
+        char *a = "Coskun ";
+        sysprintf(a);
         // end of critical section
         flag[0] = false;
     }
@@ -145,12 +170,22 @@ void processB()
             // busy wait
         }
         // critical section
-        char b = process2State + '0';
-        printf(&b);
-        printf("\n");
+        char *b = "Saltu\n";
+        sysprintf(b);
         // end of critical section
         flag[1] = false;
     }
+}
+void processC()
+{
+    while (1)
+        sysprintf("Process C\n");
+}
+void processD()
+{
+
+    while (1)
+        sysprintf("Process D\n");
 }
 
 typedef void (*constructor)();
@@ -166,23 +201,15 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
 {
     printf("Hello World! --- http://www.AlgorithMan.de\n");
 
-    GlobalDescriptorTable gdt;
-
-    ProcessManager processManager;
-    ProcessTable processTable;
     Process process1(&gdt, processA);
     Process process2(&gdt, processB);
-
-    processTable.AddProcess(&process1);
-    processTable.AddProcess(&process2);
-
-    process1State = processTable.GetProcessState(process1.GetPID());
-    process2State = processTable.GetProcessState(process2.GetPID());
 
     processManager.AddProcess(&process1);
     processManager.AddProcess(&process2);
 
+
     InterruptManager interrupts(0x20, &gdt, &processManager);
+    SyscallHandler syscalls(&interrupts, 0x80);
 
     printf("Initializing Hardware, Stage 1\n");
 

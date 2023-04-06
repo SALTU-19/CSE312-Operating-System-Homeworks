@@ -53,6 +53,7 @@ namespace myos
     public:
         Process(GlobalDescriptorTable *gdt, void entrypoint());
         Process(GlobalDescriptorTable *gdt, void entrypoint(), int ppid);
+        Process(CPUState *cpustate, int ppid);
         ~Process();
         int GetPID();
         int GetPPID();
@@ -63,7 +64,14 @@ namespace myos
     class ProcessManager
     {
     private:
-        Process *processs[256];
+        struct ProcessControlBlock
+        {
+            int pid;
+            int ppid;
+            int state;
+            CPUState *cpustate;
+        };
+        Process *processes[256];
         int numProcesss;
         int currentProcess;
 
@@ -72,31 +80,7 @@ namespace myos
         ~ProcessManager();
         bool AddProcess(Process *process);
         CPUState *Schedule(CPUState *cpustate);
-    };
-
-    class ProcessTable
-    {
-        friend class ProcessManager;
-
-    private:
-        struct ProcessControlBlock
-        {
-            common::uint32_t pid;
-            common::uint32_t ppid;
-            common::uint32_t state;
-            CPUState *cpustate;
-        };
-
-        ProcessControlBlock *processsControlBlocks[256];
-        int numProcesss;
-
-    public:
-        ProcessTable();
-        ~ProcessTable();
-        bool AddProcess(Process *process);
-        int GetProcessState(int pid);
-        void SetProcessState(int pid, int state);
-        int GetNumProcesss();
+        Process *GetCurrentProcess();
     };
 }
 
