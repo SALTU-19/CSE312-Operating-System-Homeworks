@@ -38,32 +38,32 @@ Process::Process(GlobalDescriptorTable *gdt, void entrypoint())
 {
 }
 Process::Process(CPUState *cpustate, int ppid)
-    : pid(nextpid++), ppid(ppid), state(PROCESS_STATE_READY), cpustate(cpustate)
+    : pid(nextpid++), ppid(ppid), state(PROCESS_STATE_READY)
 {
-    // this->cpustate = (CPUState *)(stack + 4096 - sizeof(CPUState));
-    // this->cpustate->eax = 0;
-    // this->cpustate->ebx = 0;
-    // this->cpustate->ecx = 0;
-    // this->cpustate->edx = 0;
+    this->cpustate = (CPUState *)(stack + 4096 - sizeof(CPUState));
+    this->cpustate->eax = (uint32_t)cpustate->eax;
+    this->cpustate->ebx = (uint32_t)cpustate->ebx;
+    this->cpustate->ecx = (uint32_t)cpustate->ecx;
+    this->cpustate->edx = (uint32_t)cpustate->edx;
 
-    // this->cpustate->esi = 0;
-    // this->cpustate->edi = 0;
-    // this->cpustate->ebp = 0;
+    this->cpustate->esi = (uint32_t)cpustate->esi;
+    this->cpustate->edi = (uint32_t)cpustate->edi;
+    this->cpustate->ebp = (uint32_t)cpustate->ebp;
 
-    // /*
-    // this->cpustate -> gs = 0;
-    // this->cpustate -> fs = 0;
-    // this->cpustate -> es = 0;
-    // this->cpustate -> ds = 0;
-    // */
+    /*
+    this->cpustate -> gs = 0;
+    this->cpustate -> fs = 0;
+    this->cpustate -> es = 0;
+    this->cpustate -> ds = 0;
+    */
 
-    // // this->cpustate -> error = 0;
+    // this->cpustate -> error = 0;
 
-    // // this->cpustate -> esp = ;
-    // this->cpustate->eip = (uint32_t)cpustate->eip;
-    // this->cpustate->cs = cpustate->cs;
-    // // cpustate -> ss = ;
-    // this->cpustate->eflags = 0x202;
+    // this->cpustate -> esp = ;
+    this->cpustate->eip = (uint32_t)cpustate->eip;
+    this->cpustate->cs = (uint32_t)cpustate->cs;
+    // cpustate -> ss = ;
+    this->cpustate->eflags = 0x202;
 }
 
 Process::~Process()
@@ -81,7 +81,7 @@ int Process::GetState()
 {
     return state;
 }
-int Process::nextpid = 0;
+int Process::nextpid = 5;
 CPUState *Process::GetCPUState()
 {
     return cpustate;

@@ -37,7 +37,6 @@ HandleException 0x09
 HandleException 0x0A
 HandleException 0x0B
 HandleException 0x0C
-HandleException 0x0D
 HandleException 0x0E
 HandleException 0x0F
 HandleException 0x10
@@ -58,7 +57,6 @@ HandleInterruptRequest 0x09
 HandleInterruptRequest 0x0A
 HandleInterruptRequest 0x0B
 HandleInterruptRequest 0x0C
-HandleInterruptRequest 0x0D
 HandleInterruptRequest 0x0E
 HandleInterruptRequest 0x0F
 HandleInterruptRequest 0x31

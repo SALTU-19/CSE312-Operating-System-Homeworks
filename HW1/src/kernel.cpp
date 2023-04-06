@@ -78,14 +78,16 @@ int fork()
     CPUState *parentCPUState = (CPUState *)parentProcess->GetCPUState();
     Process childProcess(parentCPUState, parentProcess->GetPID());
 
-    processManager.AddProcess(&childProcess);
+    // processManager.AddProcess(&childProcess);
 
-    return childProcess.GetPID();
+    return parentProcess->GetPID();
 }
 
 void sysfork()
 {
-    asm("int $0x80" : : "a"(2));
+    asm("int $0x80"
+        :
+        : "a"(2));
 }
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
@@ -141,7 +143,6 @@ void sysprintf(char *str)
 
 void processA()
 {
-    sysfork();
     while (1)
     {
         flag[0] = true;
@@ -178,14 +179,16 @@ void processB()
 }
 void processC()
 {
-    while (1)
-        sysprintf("Process C\n");
+    // while (1)
+    for (int i = 0; i < 40; i++)
+        sysprintf("Process C ");
 }
 void processD()
 {
 
-    while (1)
-        sysprintf("Process D\n");
+    // while (1)
+    for (int i = 0; i < 10; i++)
+        sysprintf("Process D ");
 }
 
 typedef void (*constructor)();
@@ -201,12 +204,39 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
 {
     printf("Hello World! --- http://www.AlgorithMan.de\n");
 
+    char a;
+    char b;
+    char c;
     Process process1(&gdt, processA);
     Process process2(&gdt, processB);
 
     processManager.AddProcess(&process1);
-    processManager.AddProcess(&process2);
+    for (int i = 0; i < 1000; i++)
+    {
+        printf("a\n");
+        printf("b\n");
+        printf("c\n");
+        printf("d\n");
+        printf("e\n");
+        printf("f\n");
+        printf("g\n");
+    }
+    Process process3(&gdt, processB);
+    processManager.AddProcess(&process3);
+    // a = '0' + process1.GetPID();
+    // b = '0' + process2.GetPID();
+    // c = '0' + fork();
 
+    // printf("Process 1 PID: ");
+    // printf(&a);
+    // printf("\n");
+    // printf("Process 2 PID: ");
+    // printf(&b);
+    // printf("\n");
+
+    // printf("Process 3 PID: ");
+    // printf(&c);
+    // printf("\n");
 
     InterruptManager interrupts(0x20, &gdt, &processManager);
     SyscallHandler syscalls(&interrupts, 0x80);
