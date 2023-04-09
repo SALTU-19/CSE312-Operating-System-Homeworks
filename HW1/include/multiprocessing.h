@@ -51,14 +51,16 @@ namespace myos
         static int nextpid;
 
     public:
-        Process(GlobalDescriptorTable *gdt, void entrypoint());
-        Process(GlobalDescriptorTable *gdt, void entrypoint(), int ppid);
-        Process(CPUState *cpustate, int ppid);
+        Process(GlobalDescriptorTable *gdt, void *entrypoint);
+        Process(GlobalDescriptorTable *gdt, void *entrypoint, int ppid);
+        Process(GlobalDescriptorTable *gdt, void *entrypoint,void **param);
+        Process(common::uint32_t esp, int ppid);
         ~Process();
         int GetPID();
         int GetPPID();
         int GetState();
         CPUState *GetCPUState();
+        void SetCPUState(CPUState *cpustate);
     };
 
     class ProcessManager
@@ -74,13 +76,18 @@ namespace myos
         Process *processes[256];
         int numProcesss;
         int currentProcess;
+        bool schedulingFlag;
 
     public:
         ProcessManager();
         ~ProcessManager();
         bool AddProcess(Process *process);
         CPUState *Schedule(CPUState *cpustate);
-        Process *GetCurrentProcess();
+        Process *GetCurrentProcess(Process *process);
+        int GetCurrentProcessID();
+        void StopScheduling();
+        void StartScheduling();
+        int GetNumProcesss();
     };
 }
 

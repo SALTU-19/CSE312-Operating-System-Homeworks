@@ -26,6 +26,7 @@ int process1State = 0;
 int process2State = 0;
 ProcessManager processManager;
 GlobalDescriptorTable gdt;
+int currentProcess = -2;
 void printf(char *str)
 {
     static uint16_t *VideoMemory = (uint16_t *)0xb8000;
@@ -71,23 +72,164 @@ void printfHex(uint8_t key)
     foo[1] = hex[key & 0xF];
     printf(foo);
 }
-
-int fork()
+int strcpy(char *dest, char *src)
 {
-    Process *parentProcess = processManager.GetCurrentProcess();
-    CPUState *parentCPUState = (CPUState *)parentProcess->GetCPUState();
-    Process childProcess(parentCPUState, parentProcess->GetPID());
-
-    // processManager.AddProcess(&childProcess);
-
-    return parentProcess->GetPID();
+    int i = 0;
+    while (src[i] != '\0')
+    {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+    return i;
+}
+void printInt(int num)
+{
+    char *foo;
+    strcpy(foo, "0000000000000000");
+    int i = 0;
+    int j = 15;
+    // if the number is negative
+    if (num < 0)
+    {
+        foo[0] = '-';
+        num *= -1;
+    }
+    while (num > 0)
+    {
+        foo[j - i] = num % 10 + '0';
+        num /= 10;
+        i++;
+    }
+    printf(foo);
+    strcpy(foo, "0000000000000000");
+}
+void sysprintf(char *str)
+{
+    asm("int $0x80"
+        :
+        : "a"(4), "b"(str));
+}
+void processA();
+void processB();
+void processC();
+void processD();
+void BinarySearch();
+Process *process;
+int fork(uint32_t esp)
+{
+    // cpu->cs = (uint32_t)gdt.CodeSegmentSelector();
+    // cpu->eip = (uint32_t)processC;
+    *process = Process(esp, 0);
+    processManager.AddProcess(process);
+    return process->GetPID();
 }
 
-void sysfork()
+int sysfork()
 {
     asm("int $0x80"
         :
         : "a"(2));
+
+    // read eax register and return the value
+    int eax = 0;
+    // asm("mov %%eax, %0"
+    //     : "=r"(eax));
+    return eax;
+}
+void processA()
+{
+    // int b = sysfork();
+    while (1)
+    {
+        flag[0] = true;
+        turn = 1;
+        while (flag[1] == true && turn == 1)
+        {
+            // busy wait
+        }
+
+        // critical section
+        char *a = "Coskun ";
+        sysprintf(a);
+        // printInt(b);
+        // end of critical section
+        flag[0] = false;
+    }
+}
+void processB()
+{
+    // fork();
+    while (1)
+    {
+        flag[1] = true;
+        turn = 0;
+        while (flag[0] == true && turn == 0)
+        {
+            // busy wait
+        }
+        // critical section
+        char *b = "Saltu\n";
+        // printInt(currentProcess);
+        sysprintf(b);
+
+        // end of critical section
+        flag[1] = false;
+    }
+}
+void processC()
+{
+    // int value = sysfork();
+    while (1)
+    {
+
+        sysprintf("a ");
+    }
+}
+void processD()
+{
+
+    while (1)
+        // for (int i = 0; i < 10; i++)
+        sysprintf("b\n");
+}
+void BinarySearch()
+{
+    printf("\nBinarySearch called\n");
+    void *data[4];
+    void **param;
+
+    // read ebx register to param
+    asm("mov %%edx, %0"
+        : "=r"(param));
+    // assign param to data array
+    data = (void**)  param;
+
+    // Retrieve values from the void pointer array
+    int *arr = (int *)data[0];
+    int key = *((int *)data[1]);
+    int start = *((int *)data[2]);
+    int end = *((int *)data[3]);
+    printf("start: ");
+    printInt(arr[2]);
+    printf("\n");
+
+    // int mid = (start + end) / 2;
+    // if (arr[mid] == key)
+    // {
+    //     printf("Found the key at index ");
+    //     printInt(mid);
+    //     printf(" in the array ");
+    //     return;
+    // }
+    // else if (arr[mid] > key)
+    // {
+    //     BinarySearch(arr, start, mid - 1, key);
+    // }
+    // else
+    // {
+    //     BinarySearch(arr, mid + 1, end, key);
+    // }
 }
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
@@ -134,63 +276,6 @@ public:
     }
 };
 
-void sysprintf(char *str)
-{
-    asm("int $0x80"
-        :
-        : "a"(4), "b"(str));
-}
-
-void processA()
-{
-    while (1)
-    {
-        flag[0] = true;
-        turn = 1;
-        while (flag[1] == true && turn == 1)
-        {
-            // busy wait
-        }
-
-        // critical section
-        char *a = "Coskun ";
-        sysprintf(a);
-        // end of critical section
-        flag[0] = false;
-    }
-}
-void processB()
-{
-
-    while (1)
-    {
-        flag[1] = true;
-        turn = 0;
-        while (flag[0] == true && turn == 0)
-        {
-            // busy wait
-        }
-        // critical section
-        char *b = "Saltu\n";
-        sysprintf(b);
-        // end of critical section
-        flag[1] = false;
-    }
-}
-void processC()
-{
-    // while (1)
-    for (int i = 0; i < 40; i++)
-        sysprintf("Process C ");
-}
-void processD()
-{
-
-    // while (1)
-    for (int i = 0; i < 10; i++)
-        sysprintf("Process D ");
-}
-
 typedef void (*constructor)();
 extern "C" constructor start_ctors;
 extern "C" constructor end_ctors;
@@ -203,40 +288,24 @@ extern "C" void callConstructors()
 extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot_magic*/)
 {
     printf("Hello World! --- http://www.AlgorithMan.de\n");
+    printf("\n");
+    void *data[4];
 
-    char a;
-    char b;
-    char c;
-    Process process1(&gdt, processA);
-    Process process2(&gdt, processB);
+    int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
+    int key = 110;
+    int start = 0;
+    int end = 9;
+
+    // Store values in the void pointer array
+    data[0] = (void *)arr;
+    data[1] = (void *)&key;
+    data[2] = (void *)&start;
+    data[3] = (void *)&end;
+    Process process1(&gdt, (void *)BinarySearch, data);
+    // Process process2(&gdt, processD);
 
     processManager.AddProcess(&process1);
-    for (int i = 0; i < 1000; i++)
-    {
-        printf("a\n");
-        printf("b\n");
-        printf("c\n");
-        printf("d\n");
-        printf("e\n");
-        printf("f\n");
-        printf("g\n");
-    }
-    Process process3(&gdt, processB);
-    processManager.AddProcess(&process3);
-    // a = '0' + process1.GetPID();
-    // b = '0' + process2.GetPID();
-    // c = '0' + fork();
-
-    // printf("Process 1 PID: ");
-    // printf(&a);
-    // printf("\n");
-    // printf("Process 2 PID: ");
-    // printf(&b);
-    // printf("\n");
-
-    // printf("Process 3 PID: ");
-    // printf(&c);
-    // printf("\n");
+    // processManager.AddProcess(&process2);
 
     InterruptManager interrupts(0x20, &gdt, &processManager);
     SyscallHandler syscalls(&interrupts, 0x80);
