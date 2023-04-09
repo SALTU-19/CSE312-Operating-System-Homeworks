@@ -16,7 +16,7 @@ SyscallHandler::~SyscallHandler()
 
 CPUState *newCpu;
 void printf(char *);
-int fork(uint32_t esp);
+int fork(CPUState *cpu);
 int value;
 uint32_t SyscallHandler::HandleInterrupt(uint32_t esp)
 {
@@ -25,17 +25,18 @@ uint32_t SyscallHandler::HandleInterrupt(uint32_t esp)
     switch (cpu->eax)
     {
     case 2:
-        // newCpu->eax = cpu->eax;
-        // newCpu->ebx = cpu->ebx;
-        // newCpu->ecx = cpu->ecx;
-        // newCpu->edx = cpu->edx;
-        // newCpu->esi = cpu->esi;
-        // newCpu->edi = cpu->edi;
-        // newCpu->ebp = cpu->ebp;
-        // newCpu->eip = cpu->eip;
-        // newCpu->cs = cpu->cs;
-        // newCpu->eflags = cpu->eflags;
-        value = fork(esp);
+        newCpu->eax = cpu->eax;
+        newCpu->ebx = cpu->ebx;
+        newCpu->ecx = cpu->ecx;
+        newCpu->edx = cpu->edx;
+        newCpu->esi = cpu->esi;
+        newCpu->edi = cpu->edi;
+        newCpu->ebp = cpu->ebp;
+        newCpu->eip = cpu->eip;
+        newCpu->cs = cpu->cs;
+        newCpu->eflags = cpu->eflags;
+        value = fork(newCpu);
+        cpu->eax = (uint32_t)value;
         break;
     case 4:
         printf((char *)cpu->ebx);

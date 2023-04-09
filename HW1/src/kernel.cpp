@@ -115,14 +115,13 @@ void processB();
 void processC();
 void processD();
 void BinarySearch();
-Process *process;
-int fork(uint32_t esp)
+Process childProcess(&gdt, processC);
+int fork(CPUState *cpu)
 {
-    // cpu->cs = (uint32_t)gdt.CodeSegmentSelector();
-    // cpu->eip = (uint32_t)processC;
-    *process = Process(esp, 0);
-    processManager.AddProcess(process);
-    return process->GetPID();
+    childProcess.SetCPUState(cpu);
+    childProcess.SetPPID(processManager.GetCurrentProcess()->GetPID());
+    processManager.AddProcess(&childProcess);
+    return 0;
 }
 
 int sysfork()
@@ -133,8 +132,8 @@ int sysfork()
 
     // read eax register and return the value
     int eax = 0;
-    // asm("mov %%eax, %0"
-    //     : "=r"(eax));
+    asm("mov %%eax, %0"
+        : "=r"(eax));
     return eax;
 }
 void processA()
@@ -179,11 +178,18 @@ void processB()
 }
 void processC()
 {
-    // int value = sysfork();
+    
+    int value = sysfork();
     while (1)
     {
-
-        sysprintf("a ");
+        if(value == 0)
+        {
+            sysprintf("child\n");
+        }
+        else
+        {
+            sysprintf("parent\n");
+        }
     }
 }
 void processD()
@@ -195,41 +201,10 @@ void processD()
 }
 void BinarySearch()
 {
-    printf("\nBinarySearch called\n");
-    void *data[4];
-    void **param;
-
-    // read ebx register to param
-    asm("mov %%edx, %0"
-        : "=r"(param));
-    // assign param to data array
-    data = (void**)  param;
-
-    // Retrieve values from the void pointer array
-    int *arr = (int *)data[0];
-    int key = *((int *)data[1]);
-    int start = *((int *)data[2]);
-    int end = *((int *)data[3]);
-    printf("start: ");
-    printInt(arr[2]);
-    printf("\n");
-
-    // int mid = (start + end) / 2;
-    // if (arr[mid] == key)
-    // {
-    //     printf("Found the key at index ");
-    //     printInt(mid);
-    //     printf(" in the array ");
-    //     return;
-    // }
-    // else if (arr[mid] > key)
-    // {
-    //     BinarySearch(arr, start, mid - 1, key);
-    // }
-    // else
-    // {
-    //     BinarySearch(arr, mid + 1, end, key);
-    // }
+    int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
+    int key = 110;
+    int start = 0;
+    int end = 9;
 }
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
@@ -288,24 +263,12 @@ extern "C" void callConstructors()
 extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot_magic*/)
 {
     printf("Hello World! --- http://www.AlgorithMan.de\n");
-    printf("\n");
-    void *data[4];
 
-    int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
-    int key = 110;
-    int start = 0;
-    int end = 9;
-
-    // Store values in the void pointer array
-    data[0] = (void *)arr;
-    data[1] = (void *)&key;
-    data[2] = (void *)&start;
-    data[3] = (void *)&end;
-    Process process1(&gdt, (void *)BinarySearch, data);
-    // Process process2(&gdt, processD);
+    Process process1(&gdt, processC);
+    Process process2(&gdt, processD);
 
     processManager.AddProcess(&process1);
-    // processManager.AddProcess(&process2);
+    processManager.AddProcess(&process2);
 
     InterruptManager interrupts(0x20, &gdt, &processManager);
     SyscallHandler syscalls(&interrupts, 0x80);
