@@ -34,7 +34,7 @@ namespace myos
 
                 static InterruptManager* ActiveInterruptManager;
                 InterruptHandler* handlers[256];
-                ProcessManager *processManager;
+                ProcessTable *processTable;
 
                 struct GateDescriptor
                 {
@@ -111,7 +111,7 @@ namespace myos
                 Port8BitSlow programmableInterruptControllerSlaveDataPort;
 
             public:
-                InterruptManager(myos::common::uint16_t hardwareInterruptOffset, myos::GlobalDescriptorTable* globalDescriptorTable, myos::ProcessManager* processManager);
+                InterruptManager(myos::common::uint16_t hardwareInterruptOffset, myos::GlobalDescriptorTable* globalDescriptorTable, myos::ProcessTable* processTable);
                 ~InterruptManager();
                 myos::common::uint16_t HardwareInterruptOffset();
                 void Activate();

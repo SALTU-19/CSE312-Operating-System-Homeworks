@@ -101,69 +101,109 @@ void Process::SetCPUState(CPUState *cpustate)
     this->cpustate->eflags = (uint32_t)cpustate->eflags;
 }
 
-ProcessManager::ProcessManager()
+ProcessTable::ProcessTable()
 {
     numProcesss = 0;
     currentProcess = -1;
     schedulingFlag = true;
 }
 
-ProcessManager::~ProcessManager()
+ProcessTable::~ProcessTable()
 {
 }
 
-bool ProcessManager::AddProcess(Process *process)
+bool ProcessTable::AddProcess(Process *process)
 {
     if (numProcesss >= 256)
         return false;
     processes[numProcesss] = process;
+    processes[numProcesss]->SetState(PROCESS_STATE_RUNNING);
     numProcesss++;
     return true;
 }
-void ProcessManager::StartScheduling()
+Process *ProcessTable::GetProcess(int pid)
+{
+    for (int i = 0; i < numProcesss; i++)
+    {
+        if (processes[i]->GetPID() == pid)
+            return processes[i];
+    }
+    return 0;
+}
+bool ProcessTable::UpdateProcessState(int pid, int state)
+{
+    for (int i = 0; i < numProcesss; i++)
+    {
+        if (processes[i]->GetPID() == pid)
+        {
+            processes[i]->SetState(state);
+            return true;
+        }
+    }
+    return false;
+}
+void ProcessTable::StartScheduling()
 {
     schedulingFlag = true;
 }
-void ProcessManager::StopScheduling()
+void ProcessTable::StopScheduling()
 {
     schedulingFlag = false;
 }
-CPUState *ProcessManager::Schedule(CPUState *cpustate)
+CPUState *ProcessTable::Schedule(CPUState *cpustate)
 {
-    // printf("Scheduling 1\n");
     if (!schedulingFlag)
         return cpustate;
-    // printf("Scheduling 2\n");
     if (numProcesss <= 0)
         return cpustate;
 
     if (currentProcess >= 0)
     {
-        // printf("Scheduling 3\n");
         processes[currentProcess]->cpustate = cpustate;
     }
-    // printInt(processes[currentProcess]->cpustate->eip);
-    // printf("\t");
-    // printInt(numProcesss);
-    // printf("\n");
+
+    // print current process cpu state
+    // printf("current process: ");
+    // printInt(currentProcess);
+    // printf(" eax: ");
+    // printInt(cpustate->eax);
+    // printf(" ebx: ");
+    // printInt(cpustate->ebx);
+    // printf(" ecx: ");
+    // printInt(cpustate->ecx);
+    // printf(" edx: ");
+    // printInt(cpustate->edx);
+    // printf(" edi: ");
+    // printInt(cpustate->edi);
+    // printf(" ebp: ");
+    // printInt(cpustate->ebp);
+    // printf(" eip: ");
+    // printInt(cpustate->eip);
+    // printf(" eflags: ");
+    // printInt(cpustate->eflags);
+
     if (++currentProcess >= numProcesss)
     {
-        // printf("Scheduling 4\n");
         currentProcess %= numProcesss;
     }
-    // printf("Scheduling 5\n");
-    // printInt(processes[currentProcess]->cpustate->eip);
+    while (processes[currentProcess]->GetState() != PROCESS_STATE_RUNNING)
+    {
+        if (++currentProcess >= numProcesss)
+        {
+            currentProcess %= numProcesss;
+        }
+    }
     return processes[currentProcess]->cpustate;
 }
-Process *ProcessManager::GetCurrentProcess()
+Process *ProcessTable::GetCurrentProcess()
 {
     return processes[currentProcess];
 }
-int ProcessManager::GetNumProcesss()
+int ProcessTable::GetNumProcesss()
 {
     return numProcesss;
 }
-int ProcessManager::GetCurrentProcessID()
+int ProcessTable::GetCurrentProcessID()
 {
     return currentProcess;
 }

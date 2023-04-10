@@ -20,13 +20,17 @@ using namespace myos::drivers;
 using namespace myos::hardwarecommunication;
 using namespace myos::gui;
 
-bool flag[2] = {false, false};
-int turn;
-int process1State = 0;
-int process2State = 0;
-ProcessManager processManager;
+ProcessTable processTable;
 GlobalDescriptorTable gdt;
-int currentProcess = -2;
+void BinarySearch();
+void LinearSearch();
+void Collatz();
+void forkProcess();
+void firstStrategy();
+void secondStrategy();
+void finalStrategy();
+Process *processArray[10];
+int index = 0;
 void printf(char *str)
 {
     static uint16_t *VideoMemory = (uint16_t *)0xb8000;
@@ -86,9 +90,9 @@ int strcpy(char *dest, char *src)
 void printInt(int num)
 {
     char *foo;
-    strcpy(foo, "0000000000000000");
+    strcpy(foo, "0000");
     int i = 0;
-    int j = 15;
+    int j = 4;
     // if the number is negative
     if (num < 0)
     {
@@ -102,7 +106,7 @@ void printInt(int num)
         i++;
     }
     printf(foo);
-    strcpy(foo, "0000000000000000");
+    strcpy(foo, "0000");
 }
 void sysprintf(char *str)
 {
@@ -110,25 +114,22 @@ void sysprintf(char *str)
         :
         : "a"(4), "b"(str));
 }
-void processA();
-void processB();
-void processC();
-void processD();
-void BinarySearch();
-Process childProcess(&gdt, processC);
-int fork(CPUState *cpu)
+int fork(CPUState *cpu, int index)
 {
-    childProcess.SetCPUState(cpu);
-    childProcess.SetPPID(processManager.GetCurrentProcess()->GetPID());
-    processManager.AddProcess(&childProcess);
-    return 0;
+    processTable.StopScheduling();
+    int pid = processTable.GetCurrentProcess()->GetPID();
+    processArray[index]->SetCPUState(cpu);
+    processArray[index]->SetPPID(pid);
+    processTable.AddProcess(processArray[index]);
+    processTable.StartScheduling();
+    return processArray[index]->GetPID();
 }
 
 int sysfork()
 {
     asm("int $0x80"
         :
-        : "a"(2));
+        : "a"(2), "b"(index));
 
     // read eax register and return the value
     int eax = 0;
@@ -136,75 +137,298 @@ int sysfork()
         : "=r"(eax));
     return eax;
 }
-void processA()
+int waitpid(int pid)
 {
-    // int b = sysfork();
-    while (1)
+    if (processTable.GetProcess(pid)->GetState() == PROCESS_STATE_BLOCKED)
     {
-        flag[0] = true;
-        turn = 1;
-        while (flag[1] == true && turn == 1)
-        {
-            // busy wait
-        }
 
-        // critical section
-        char *a = "Coskun ";
-        sysprintf(a);
-        // printInt(b);
-        // end of critical section
-        flag[0] = false;
+        return 0;
+    }
+    else
+    {
+        return -1;
     }
 }
-void processB()
+int syswaitpid(int pid)
 {
-    // fork();
-    while (1)
-    {
-        flag[1] = true;
-        turn = 0;
-        while (flag[0] == true && turn == 0)
-        {
-            // busy wait
-        }
-        // critical section
-        char *b = "Saltu\n";
-        // printInt(currentProcess);
-        sysprintf(b);
-
-        // end of critical section
-        flag[1] = false;
-    }
+    asm("int $0x80"
+        :
+        : "a"(7), "b"(pid));
+    int eax = 0;
+    asm("mov %%eax, %0"
+        : "=r"(eax));
+    return eax;
 }
-void processC()
+void forkProcess()
 {
-    
-    int value = sysfork();
+    int value = 0;
+    if (processTable.GetCurrentProcess()->GetPPID() == 0)
+        value = sysfork();
     while (1)
     {
-        if(value == 0)
+        if (value == 0)
         {
+
             sysprintf("child\n");
         }
         else
         {
+
             sysprintf("parent\n");
         }
     }
 }
-void processD()
-{
-
-    while (1)
-        // for (int i = 0; i < 10; i++)
-        sysprintf("b\n");
-}
 void BinarySearch()
 {
+
+    int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
+    int key = 110, start = 0, end = 9, mid;
+    int pid = processTable.GetCurrentProcess()->GetPID();
+    bool found = false;
+    while (1)
+    {
+        while (start <= end)
+        {
+            mid = (start + end) / 2;
+            if (arr[mid] == key)
+            {
+                // Element found
+                found = true;
+            }
+            else if (arr[mid] < key)
+            {
+                // Look in the right half
+                start = mid + 1;
+            }
+            else
+            {
+                // Look in the left half
+                end = mid - 1;
+            }
+        }
+        if (!found)
+        {
+            printf("Binary Search Element found at index: ");
+            printInt(mid);
+            printf("\n");
+        }
+        else
+        {
+            printf("Binary Search Element found in the array \n");
+        }
+        for (int i = 0; i < 100000000; i++)
+            ;
+        processTable.UpdateProcessState(pid, PROCESS_STATE_BLOCKED);
+    }
+}
+void LinearSearch()
+{
+    int pid = processTable.GetCurrentProcess()->GetPID();
     int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
     int key = 110;
-    int start = 0;
-    int end = 9;
+    bool found = false;
+    int i;
+    while (1)
+    {
+        for (i = 0; i < 10; i++)
+        {
+            if (arr[i] == key)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            printf("Liner Search Element not found in the array \n");
+        }
+        else
+        {
+            printf("Liner Search Element found at index: ");
+            printInt(i);
+            printf("\n");
+        }
+        for (int i = 0; i < 100000000; i++)
+            ;
+        processTable.UpdateProcessState(pid, PROCESS_STATE_BLOCKED);
+    }
+}
+void Collatz()
+{
+    int pid = processTable.GetCurrentProcess()->GetPID();
+    int num = 10;
+
+    while (1)
+    {
+        while (num != 1)
+        {
+            if (num % 2 == 0)
+            {
+                num /= 2;
+            }
+            else
+            {
+                num = num * 3 + 1;
+            }
+            printInt(num);
+            printf(" ");
+        }
+        printf("Collatz Sequence: ");
+        printInt(num);
+        printf(" ");
+        printf("\n");
+        for (int i = 0; i < 100000000; i++)
+            ;
+        processTable.UpdateProcessState(pid, PROCESS_STATE_BLOCKED);
+    }
+}
+Process processA(&gdt, BinarySearch);
+Process processB(&gdt, LinearSearch);
+Process processC(&gdt, Collatz);
+void firstStrategy()
+{
+    int num = 0;
+    processTable.AddProcess(&processA);
+    processTable.AddProcess(&processB);
+    processTable.AddProcess(&processC);
+    int pidA = processA.GetPID();
+    int pidB = processB.GetPID();
+    int pidC = processC.GetPID();
+    bool terminated = false;
+    num = processTable.GetNumProcesss();
+    while (1)
+    {
+        if (terminated)
+        {
+            // sysprintf("Process Number: ");
+            // printInt(num);
+            // sysprintf("         All processes terminated\n");
+            break;
+        }
+        else
+        {
+            sysprintf("All processes running\n");
+            if (syswaitpid(pidA) == 0)
+            {
+                sysprintf("Binary Search terminated\n");
+                terminated = true;
+            }
+            else
+            {
+                sysprintf("Binary Search running\n");
+                terminated = false;
+            }
+            if (syswaitpid(pidB) == 0)
+            {
+                sysprintf("Linear Search terminated\n");
+                terminated = true;
+            }
+            else
+            {
+                sysprintf("Linear Search running\n");
+                terminated = false;
+            }
+            if (syswaitpid(pidC) == 0)
+            {
+                sysprintf("CollatZ terminated\n");
+                terminated = true;
+            }
+            else
+            {
+                sysprintf("CollatZ running\n");
+                terminated = false;
+            }
+        }
+    }
+}
+
+void secondStrategy()
+{
+    int num = 0;
+    bool terminated = false;
+    int index = 0;
+    for (int i = 0; i < 10; i++)
+    {
+        *processArray[i] = Process(&gdt, LinearSearch);
+    }
+    for (int i = 0; i < 10; i++)
+    {
+        index = i;
+        sysfork();
+    }
+    //  num = processTable.GetNumProcesss();
+    while (1)
+    {
+
+        if (terminated)
+        {
+            // sysprintf("Process Number: ");
+            // printInt(num);
+            // sysprintf("         All processes terminated\n");
+            break;
+        }
+        else
+        {
+            sysprintf("All processes running\n");
+            for (int i = 0; i < 10; i++)
+            {
+                if (syswaitpid(processArray[i]->GetPID()) == 0)
+                {
+                    sysprintf("Linear Search terminated\n");
+                    terminated = true;
+                }
+                else
+                {
+                    sysprintf("Linear Search running\n");
+                    terminated = false;
+                }
+            }
+        }
+    }
+}
+void finalStrategy()
+{
+    int num = 0;
+    bool terminated = false;
+    int index = 0;
+    for (int i = 0; i < 6; i++)
+    {
+        if (i < 3)
+            *processArray[i] = Process(&gdt, LinearSearch);
+        else
+            *processArray[i] = Process(&gdt, BinarySearch);
+    }
+    for (int i = 0; i < 6; i++)
+    {
+        index = i;
+        sysfork();
+    }
+    // num = processTable.GetNumProcesss();
+    while (1)
+    {
+        if (terminated)
+        {
+            // sysprintf("Process Number: ");
+            // printInt(num);
+            // sysprintf("         All processes terminated\n");
+            break;
+        }
+        else
+        {
+            sysprintf("All processes running\n");
+            for (int i = 0; i < 6; i++)
+            {
+                if (syswaitpid(processArray[i]->GetPID()) == 0)
+                {
+                    terminated = true;
+                }
+                else
+                {
+                    terminated = false;
+                }
+            }
+        }
+    }
 }
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
@@ -264,13 +488,16 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
 {
     printf("Hello World! --- http://www.AlgorithMan.de\n");
 
-    Process process1(&gdt, processC);
-    Process process2(&gdt, processD);
+    Process init(&gdt, firstStrategy);
+    processTable.AddProcess(&init);
 
-    processManager.AddProcess(&process1);
-    processManager.AddProcess(&process2);
+    // Process init(&gdt, secondStrategy);
+    // processTable.AddProcess(&init);
 
-    InterruptManager interrupts(0x20, &gdt, &processManager);
+    // Process init(&gdt, finalStrategy);
+    // processTable.AddProcess(&init);
+
+    InterruptManager interrupts(0x20, &gdt, &processTable);
     SyscallHandler syscalls(&interrupts, 0x80);
 
     printf("Initializing Hardware, Stage 1\n");

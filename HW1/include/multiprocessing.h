@@ -40,7 +40,7 @@ namespace myos
 
     class Process
     {
-        friend class ProcessManager;
+        friend class ProcessTable;
 
     private:
         common::uint8_t stack[4096]; // 4 KiB
@@ -64,25 +64,21 @@ namespace myos
         void SetCPUState(CPUState *cpustate);
     };
 
-    class ProcessManager
+    class ProcessTable
     {
     private:
-        struct ProcessControlBlock
-        {
-            int pid;
-            int ppid;
-            int state;
-            CPUState *cpustate;
-        };
+
         Process *processes[256];
         int numProcesss;
         int currentProcess;
         bool schedulingFlag;
 
     public:
-        ProcessManager();
-        ~ProcessManager();
+        ProcessTable();
+        ~ProcessTable();
         bool AddProcess(Process *process);
+        Process *GetProcess(int pid);
+        bool UpdateProcessState(int pid, int state);
         CPUState *Schedule(CPUState *cpustate);
         Process *GetCurrentProcess();
         int GetCurrentProcessID();
