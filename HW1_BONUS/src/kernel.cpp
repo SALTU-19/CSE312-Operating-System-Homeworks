@@ -29,8 +29,14 @@ void forkProcess();
 void firstStrategy();
 void secondStrategy();
 void finalStrategy();
+int stringToInt(char *str);
+void clearBuffer(char *str);
 Process *processArray[10];
 int index = 0;
+
+char input[100];
+int inputIndex = 0;
+bool inputFlag = false;
 void printf(char *str)
 {
     static uint16_t *VideoMemory = (uint16_t *)0xb8000;
@@ -66,6 +72,27 @@ void printf(char *str)
             y = 0;
         }
     }
+}
+int stringToInt(char *str)
+{
+    int i = 0;
+    int num = 0;
+    while (str[i] != '\0')
+    {
+        num = num * 10 + str[i] - '0';
+        i++;
+    }
+    return num;
+}
+void clearBuffer(char *str)
+{
+    int i = 0;
+    while (str[i] != '\0')
+    {
+        str[i] = '\0';
+        i++;
+    }
+    return;
 }
 
 void printfHex(uint8_t key)
@@ -116,12 +143,10 @@ void sysprintf(char *str)
 }
 int fork(CPUState *cpu, int index)
 {
-    processTable.StopScheduling();
     int pid = processTable.GetCurrentProcess()->GetPID();
     processArray[index]->SetCPUState(cpu);
     processArray[index]->SetPPID(pid);
     processTable.AddProcess(processArray[index]);
-    processTable.StartScheduling();
     return processArray[index]->GetPID();
 }
 
@@ -182,9 +207,22 @@ void BinarySearch()
 {
 
     int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
-    int key = 110, start = 0, end = 9, mid;
+    int start = 0, end = 9, mid;
+    int key = stringToInt(input);
+    // clearBuffer(input);
     int pid = processTable.GetCurrentProcess()->GetPID();
     bool found = false;
+
+    printf("Array Elements: ");
+    for (int i = 0; i < 10; i++)
+    {
+        printInt(arr[i]);
+        printf(" ");
+    }
+    printf("\n");
+    printf("Key: ");
+    printInt(key);
+    printf("\n");
     while (1)
     {
         while (start <= end)
@@ -223,11 +261,23 @@ void BinarySearch()
 }
 void LinearSearch()
 {
+
     int pid = processTable.GetCurrentProcess()->GetPID();
     int arr[10] = {10, 20, 80, 30, 60, 50, 110, 100, 130, 170};
-    int key = 110;
+    int key = stringToInt(input);
+    // clearBuffer(input);
     bool found = false;
     int i;
+    printf("Array Elements: ");
+    for (int i = 0; i < 10; i++)
+    {
+        printInt(arr[i]);
+        printf(" ");
+    }
+    printf("\n");
+    printf("Key: ");
+    printInt(key);
+    printf("\n");
     while (1)
     {
         for (i = 0; i < 10; i++)
@@ -255,9 +305,14 @@ void LinearSearch()
 }
 void Collatz()
 {
+
     int pid = processTable.GetCurrentProcess()->GetPID();
     int num = 10;
-
+    clearBuffer(input);
+    printf("Collatz Sequence: ");
+    printInt(num);
+    printf(" ");
+    printf("\n");
     while (1)
     {
         while (num != 1)
@@ -282,18 +337,35 @@ void Collatz()
         processTable.UpdateProcessState(pid, PROCESS_STATE_BLOCKED);
     }
 }
-Process processA(&gdt, BinarySearch);
-Process processB(&gdt, LinearSearch);
-Process processC(&gdt, Collatz);
+
 void firstStrategy()
 {
+    Process processA(&gdt, BinarySearch);
+    Process processB(&gdt, LinearSearch);
+    Process processC(&gdt, Collatz);
+
+    processArray[0] = &processA;
+    processArray[1] = &processB;
+    processArray[2] = &processC;
+    while (!inputFlag)
+        ;
     int num = 0;
-    processTable.AddProcess(&processA);
-    processTable.AddProcess(&processB);
-    processTable.AddProcess(&processC);
-    int pidA = processA.GetPID();
-    int pidB = processB.GetPID();
-    int pidC = processC.GetPID();
+
+    for (int i = 0; i < 3; i++)
+    {
+        index = i;
+        sysfork();
+    }
+
+    int pidA = processArray[0]->GetPID();
+    int pidB = processArray[1]->GetPID();
+    int pidC = processArray[2]->GetPID();
+    printInt(pidA);
+    printf(" ");
+    printInt(pidB);
+    printf(" ");
+    printInt(pidC);
+    printf("\n");
     bool terminated = false;
     num = processTable.GetNumProcesss();
     while (1)
@@ -307,7 +379,7 @@ void firstStrategy()
         }
         else
         {
-            sysprintf("All processes running\n");
+            // sysprintf("All processes running\n");
             if (syswaitpid(pidA) == 0)
             {
                 sysprintf("Binary Search terminated\n");
@@ -315,7 +387,7 @@ void firstStrategy()
             }
             else
             {
-                sysprintf("Binary Search running\n");
+                // sysprintf("Binary Search running\n");
                 terminated = false;
             }
             if (syswaitpid(pidB) == 0)
@@ -325,7 +397,7 @@ void firstStrategy()
             }
             else
             {
-                sysprintf("Linear Search running\n");
+                // sysprintf("Linear Search running\n");
                 terminated = false;
             }
             if (syswaitpid(pidC) == 0)
@@ -335,7 +407,7 @@ void firstStrategy()
             }
             else
             {
-                sysprintf("CollatZ running\n");
+                // sysprintf("CollatZ running\n");
                 terminated = false;
             }
         }
@@ -344,13 +416,34 @@ void firstStrategy()
 
 void secondStrategy()
 {
+    while (!inputFlag)
+        ;
     int num = 0;
     bool terminated = false;
-    int index = 0;
-    for (int i = 0; i < 10; i++)
-    {
-        *processArray[i] = Process(&gdt, LinearSearch);
-    }
+
+    Process processA(&gdt, LinearSearch);
+    Process processB(&gdt, LinearSearch);
+    Process processC(&gdt, LinearSearch);
+    Process processD(&gdt, LinearSearch);
+    Process processE(&gdt, LinearSearch);
+    Process processF(&gdt, LinearSearch);
+    Process processG(&gdt, LinearSearch);
+    Process processH(&gdt, LinearSearch);
+    Process processI(&gdt, LinearSearch);
+    Process processJ(&gdt, LinearSearch);
+
+    processArray[0] = &processA;
+    processArray[1] = &processB;
+    processArray[2] = &processC;
+    processArray[3] = &processD;
+    processArray[4] = &processE;
+    processArray[5] = &processF;
+    processArray[6] = &processG;
+    processArray[7] = &processH;
+    processArray[8] = &processI;
+    processArray[9] = &processJ;
+
+
     for (int i = 0; i < 10; i++)
     {
         index = i;
@@ -369,17 +462,17 @@ void secondStrategy()
         }
         else
         {
-            sysprintf("All processes running\n");
+            // sysprintf("All processes running\n");
             for (int i = 0; i < 10; i++)
             {
                 if (syswaitpid(processArray[i]->GetPID()) == 0)
                 {
-                    sysprintf("Linear Search terminated\n");
+                    // sysprintf("Linear Search terminated\n");
                     terminated = true;
                 }
                 else
                 {
-                    sysprintf("Linear Search running\n");
+                    // sysprintf("Linear Search running\n");
                     terminated = false;
                 }
             }
@@ -388,16 +481,24 @@ void secondStrategy()
 }
 void finalStrategy()
 {
+    while (!inputFlag)
+        ;
     int num = 0;
     bool terminated = false;
-    int index = 0;
-    for (int i = 0; i < 6; i++)
-    {
-        if (i < 3)
-            *processArray[i] = Process(&gdt, LinearSearch);
-        else
-            *processArray[i] = Process(&gdt, BinarySearch);
-    }
+    Process processA(&gdt, LinearSearch);
+    Process processB(&gdt, LinearSearch);
+    Process processC(&gdt, LinearSearch);
+    Process processD(&gdt, BinarySearch);
+    Process processE(&gdt, BinarySearch);
+    Process processF(&gdt, BinarySearch);
+
+    processArray[0] = &processA;
+    processArray[1] = &processB;
+    processArray[2] = &processC;
+    processArray[3] = &processD;
+    processArray[4] = &processE;
+    processArray[5] = &processF;
+
     for (int i = 0; i < 6; i++)
     {
         index = i;
@@ -415,7 +516,7 @@ void finalStrategy()
         }
         else
         {
-            sysprintf("All processes running\n");
+            // sysprintf("All processes running\n");
             for (int i = 0; i < 6; i++)
             {
                 if (syswaitpid(processArray[i]->GetPID()) == 0)
@@ -436,9 +537,17 @@ class PrintfKeyboardEventHandler : public KeyboardEventHandler
 public:
     void OnKeyDown(char c)
     {
-        char *foo = " ";
-        foo[0] = c;
-        printf(foo);
+        // char *foo = " ";
+        // foo[0] = c;
+        if (c != '\n')
+            input[inputIndex++] = c;
+        else
+        {
+            inputFlag = true;
+            processTable.StartScheduling();
+        }
+
+        printf(&c);
     }
 };
 
@@ -486,21 +595,21 @@ extern "C" void callConstructors()
 
 extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot_magic*/)
 {
-    printf("Hello World! --- http://www.AlgorithMan.de\n");
+    printf("Enter input: ");
 
     // Process init(&gdt, firstStrategy);
     // processTable.AddProcess(&init);
 
-    Process init(&gdt, secondStrategy);
-    processTable.AddProcess(&init);
-
-    // Process init(&gdt, finalStrategy);
+    // Process init(&gdt, secondStrategy);
     // processTable.AddProcess(&init);
+
+    Process init(&gdt, finalStrategy);
+    processTable.AddProcess(&init);
 
     InterruptManager interrupts(0x20, &gdt, &processTable);
     SyscallHandler syscalls(&interrupts, 0x80);
 
-    printf("Initializing Hardware, Stage 1\n");
+    // printf("Initializing Hardware, Stage 1\n");
 
 #ifdef GRAPHICSMODE
     Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
@@ -529,10 +638,10 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
 
     VideoGraphicsArray vga;
 
-    printf("Initializing Hardware, Stage 2\n");
+    // printf("Initializing Hardware, Stage 2\n");
     drvManager.ActivateAll();
 
-    printf("Initializing Hardware, Stage 3\n");
+    // printf("Initializing Hardware, Stage 3\n");
 
 #ifdef GRAPHICSMODE
     vga.SetMode(320, 200, 8);
