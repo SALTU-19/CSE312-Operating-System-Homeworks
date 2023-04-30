@@ -85,6 +85,7 @@ namespace myos
         void StopScheduling();
         void StartScheduling();
         int GetNumProcesss();
+        bool GetSchedulingFlag();
     };
 }
 

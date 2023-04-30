@@ -150,10 +150,14 @@ void ProcessTable::StopScheduling()
 {
     schedulingFlag = false;
 }
+bool ProcessTable::GetSchedulingFlag()
+{
+    return schedulingFlag;
+}
 CPUState *ProcessTable::Schedule(CPUState *cpustate)
 {
-    if (!schedulingFlag)
-        return cpustate;
+    // if (!schedulingFlag)
+    //     return cpustate;
     if (numProcesss <= 0)
         return cpustate;
 
@@ -193,7 +197,7 @@ CPUState *ProcessTable::Schedule(CPUState *cpustate)
             currentProcess %= numProcesss;
         }
     }
-    StopScheduling();
+    // StopScheduling();
     return processes[currentProcess]->cpustate;
 }
 Process *ProcessTable::GetCurrentProcess()
