@@ -1,16 +1,16 @@
-#ifndef _MAKEFILESYSTEM_H_
-#define _MAKEFILESYSTEM_H_
+#ifndef _FILESYSTEMOPER_H_
+#define _FILESYSTEMOPER_H_
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_FILENAME_LENGTH 10
-#define MAX_DIRECTORY_ENTRIES 256
 #define KB 1024
 #define MB 1024 * KB
 #define MAX_BLOCK_SIZE 4 * KB
 #define MAX_BLOCKS 4096 // because of FAT12 (12 bits per entry)
+#define MAX_DIRECTORY_ENTRIES MAX_BLOCKS / sizeof(DirectoryEntry)
 
 typedef struct
 {
@@ -39,8 +39,7 @@ Superblock superblock;
 DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
 FATEntry fat_table[MAX_BLOCKS];
 
-void getArgs(int argc, char *argv[], char *filename, unsigned short int *block_size);
-void initializeFilesystem(unsigned short int block_size);
-void createFileSystem(char *filename);
+void getArgs(int argc, char *argv[], char *filename, char *operation, char *parameters);
+void loadFileSystem(char *filename);
 
-#endif // _MAKEFILESYSTEM_H_
+#endif // _FILESYSTEMOPER_H_
