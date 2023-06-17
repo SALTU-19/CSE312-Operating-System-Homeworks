@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     printf("Filename: %s\n", filename);
     printf("Operation: %s\n", operation);
     printf("Parameters: %s\n", parameters);
+    loadFileSystem(filename);
 
     return 0;
 }

@@ -2,8 +2,8 @@ makeFileSystemObj = makeFileSystemObj/makeFileSystem.o makeFileSystemObj/main.o
 fileSystemOperObj = fileSystemOperObj/fileSystemOper.o fileSystemOperObj/main.o
 makeFileSystemBinary = makeFileSystem
 fileSystemOperBinary = fileSystemOper
-fileSystemOperFlags = -Wall -Werror -Wextra -g -lm -Ifilesystemoperfolder/include
-makeFileSystemFlags = -Wall -Werror -Wextra -g -lm -Imakefilesystemfolder/include
+fileSystemOperFlags =   -g -lm -Ifilesystemoperfolder/include
+makeFileSystemFlags =   -g -lm -Imakefilesystemfolder/include
 
 
 .PHONY: all clean

@@ -62,17 +62,35 @@ void createFileSystem(char *filename, int block_size)
     root_dir.size = 0;
     root_dir.last_mod_date = 0;
     root_dir.last_mod_time = 0;
-    root_dir.start_block = 0;
+    root_dir.start_block = superblock.root_directory_pos;
 
-    directory_table[0] = root_dir;
+    directory_table[0].size = root_dir.size;
+    directory_table[0].last_mod_date = root_dir.last_mod_date;
+    directory_table[0].last_mod_time = root_dir.last_mod_time;
+    directory_table[0].start_block = root_dir.start_block;
+    strcpy(directory_table[0].filename, root_dir.filename);
 
-    // put superblock in the first block
-    memcpy(fileSystem[0], &superblock, sizeof(Superblock));
-    // put FAT table in the following blocks
-    memcpy(fileSystem[fat_table_pos], fat_table, fat_table_size);
+    printf("Root directory filename: %s\n", directory_table[0].filename);
 
-    // put directory table in the following blocks
-    memcpy(fileSystem[directory_table_pos], directory_table, directory_table_size);
+    // Put superblock in the first block
+    char *superblock_ptr = fileSystem[0];
+    memcpy(superblock_ptr, &superblock, sizeof(Superblock));
+
+    // Put FAT table in the following blocks
+    char *fat_table_ptr = fileSystem[fat_table_pos];
+    for (int i = 0; i < fat_table_size / block_size; i++)
+    {
+        memcpy(fat_table_ptr, &fat_table[i * (block_size / sizeof(FATEntry))], block_size);
+        fat_table_ptr += block_size;
+    }
+
+    // Put directory table in the following blocks
+    char *directory_table_ptr = fileSystem[directory_table_pos];
+    for (int i = 0; i < directory_table_size / block_size; i++)
+    {
+        memcpy(directory_table_ptr, &directory_table[i * (block_size / sizeof(DirectoryEntry))], block_size);
+        directory_table_ptr += block_size;
+    }
 
     FILE *file = fopen(filename, "wb");
     if (file == NULL)
@@ -80,7 +98,8 @@ void createFileSystem(char *filename, int block_size)
         printf("Error opening the file.\n");
         return;
     }
-    // write the file system to the file
+
+    // Write the file system to the file
     for (int i = 0; i < MAX_BLOCKS; i++)
     {
         fwrite(fileSystem[i], sizeof(char), block_size, file);
