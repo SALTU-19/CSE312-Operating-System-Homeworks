@@ -9,7 +9,7 @@
 #define KB 1024
 #define MB 1024 * KB
 #define MAX_BLOCK_SIZE 4 * KB
-#define MAX_BLOCKS 4096 // because of FAT12 (12 bits per entry)
+#define MAX_BLOCKS 4 * KB // because of FAT12 (12 bits per entry)
 #define MAX_DIRECTORY_ENTRIES MAX_BLOCKS / sizeof(DirectoryEntry)
 
 typedef struct
@@ -24,22 +24,35 @@ typedef struct
 typedef struct
 {
     char filename[MAX_FILENAME_LENGTH];
-    unsigned int size;                // Size of the file
-    unsigned short int last_mod_date; // Last modification date
-    unsigned short int last_mod_time; // Last modification time
-    unsigned int start_block;         // Starting block of the file
+    unsigned int size;        // Size of the file
+    unsigned int start_block; // Starting block of the file
 } DirectoryEntry;
 
 typedef struct
 {
-    unsigned short int fat_entry; // FAT entry value
+    unsigned int fat_entry; // FAT entry value
 } FATEntry;
 
 Superblock superblock;
-DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
 FATEntry fat_table[MAX_BLOCKS];
+char **fileSystem;
 
 void getArgs(int argc, char *argv[], char *filename, char *operation, char *parameters);
 void loadFileSystem(char *filename);
+void handleOperation(char *operation, char *parameters);
+void mkdir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size);
+void rmdir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size);
+void dir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size);
+void parsePath(char *path, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int *count);
+void readDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], unsigned int block);
+void createDirectoryTable(unsigned int block);
+void writeDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], unsigned int block);
+void putDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], DirectoryEntry entry);
+void removeDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], int index);
+int findEmptyBlock();
+void writeFATEntry(unsigned int block, unsigned int value);
+void writeFileSystem(char *filename);
+int findDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], char *filename);
+void printDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES]);
 
 #endif // _FILESYSTEMOPER_H_

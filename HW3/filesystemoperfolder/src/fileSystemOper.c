@@ -16,6 +16,7 @@ void getArgs(int argc, char *argv[], char *filename, char *operation, char *para
 }
 void loadFileSystem(char *filename)
 {
+    DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
     FILE *file = fopen(filename, "rb");
     if (file == NULL)
     {
@@ -25,8 +26,6 @@ void loadFileSystem(char *filename)
 
     // Read superblock from the first block
     fread(&superblock, sizeof(Superblock), 1, file);
-
-    char **fileSystem;
 
     int fat_table_size;
     int fat_table_pos;
@@ -78,14 +77,345 @@ void loadFileSystem(char *filename)
         }
     }
 
-    printf("Total blocks: %d\n", superblock.total_blocks);
-    printf("Block size: %d\n", superblock.block_size);
-    printf("Root directory position: %d\n", directory_table_pos);
-    printf("FAT table position: %d\n", fat_table_pos);
-    printf("Data blocks position: %d\n", data_blocks_pos);
+    // printf("Total blocks: %d\n", superblock.total_blocks);
+    // printf("Block size: %d\n", superblock.block_size);
+    // printf("Root directory position: %d\n", directory_table_pos);
+    // printf("FAT table position: %d\n", fat_table_pos);
+    // printf("Data blocks position: %d\n", data_blocks_pos);
 
-    // Print root directory first index
-    printf("Root directory filename: %s\n", directory_table[0].filename);
+    // printf("Root directory size: %d\n", directory_table[0].size);
+    // printf("Fat table first entry: %d\n", fat_table[0].fat_entry);
 
     fclose(file);
+}
+void handleOperation(char *operation, char *parameters)
+{
+    if (strcmp(operation, "dir") == 0)
+    {
+        if (parameters[0] != '/')
+        {
+            // print error
+            printf("Invalid path.\n");
+            exit(1);
+        }
+        char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH];
+        int size = 0;
+        int block;
+        // parse path
+        parsePath(parameters, dirs, &size);
+        dir(superblock.root_directory_pos, dirs, 0, size);
+    }
+    else if (strcmp(operation, "mkdir") == 0)
+    {
+        if (parameters[0] != '/')
+        {
+            // print error
+            printf("Invalid path.\n");
+            exit(1);
+        }
+        if (parameters[strlen(parameters) - 1] == '/')
+        {
+            printf("Can not create root directory.\n");
+            exit(1);
+        }
+        char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH];
+        int size = 0;
+        int block;
+        // parse path
+        parsePath(parameters, dirs, &size);
+        mkdir(superblock.root_directory_pos, dirs, 1, size);
+    }
+    else if (strcmp(operation, "rmdir") == 0)
+    {
+        if (parameters[0] != '/')
+        {
+            // print error
+            printf("Invalid path.\n");
+            exit(1);
+        }
+        if (parameters[strlen(parameters) - 1] == '/')
+        {
+            printf("Can not delete root directory.\n");
+            exit(1);
+        }
+        char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH];
+        int size = 0;
+        int block;
+        // parse path
+        parsePath(parameters, dirs, &size);
+        rmdir(superblock.root_directory_pos, dirs, 1, size);
+    }
+    else if (strcmp(operation, "write") == 0)
+    {
+        printf("write\n");
+    }
+    else if (strcmp(operation, "read") == 0)
+    {
+        printf("read\n");
+    }
+    else if (strcmp(operation, "del") == 0)
+    {
+        printf("del\n");
+    }
+    else if (strcmp(operation, "dumpe2fs") == 0)
+    {
+        printf("dumpe2fs\n");
+    }
+    else
+    {
+        printf("Invalid operation.\n");
+    }
+}
+void mkdir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size)
+{
+    DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
+    // read directory table
+    readDirectoryTable(directory_table, block);
+    if (count == size)
+    {
+        if (findDirectoryEntry(directory_table, dirs[count - 1]) != -1)
+        {
+            printf("Directory already exists.\n");
+            return;
+        }
+        int new_block = findEmptyBlock();
+        if (block == -1)
+        {
+            printf("No empty blocks.\n");
+            return;
+        }
+        DirectoryEntry directory_entry;
+        directory_entry.start_block = new_block;
+        directory_entry.size = 0;
+        strcpy(directory_entry.filename, dirs[count - 1]);
+        putDirectoryEntry(directory_table, directory_entry);
+        writeDirectoryTable(directory_table, block);
+        createDirectoryTable(new_block);
+        return;
+    }
+    else
+    {
+        for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+        {
+            if (strcmp(directory_table[i].filename, dirs[count - 1]) == 0)
+            {
+                mkdir(directory_table[i].start_block, dirs, count + 1, size);
+                return;
+            }
+        }
+        printf("No such directory.\n");
+        return;
+    }
+}
+void rmdir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size)
+{
+    DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
+    // read directory table
+    readDirectoryTable(directory_table, block);
+    if (count == size)
+    {
+        int index = findDirectoryEntry(directory_table, dirs[count - 1]);
+        if (index == -1)
+        {
+            printf("There is no such directory.\n");
+            return;
+        }
+        int start_block = directory_table[index].start_block;
+        // edit Fat table
+        while (1)
+        {
+            if (fat_table[start_block].fat_entry == -1)
+            {
+                writeFATEntry(start_block, -2);
+                break;
+            }
+            else if (fat_table[start_block].fat_entry == -2)
+            {
+                writeFATEntry(start_block, -2);
+                break;
+            }
+
+            int temp = fat_table[start_block].fat_entry;
+            writeFATEntry(start_block, -2);
+            start_block = temp;
+        }
+        removeDirectoryEntry(directory_table, index);
+        writeDirectoryTable(directory_table, block);
+        return;
+    }
+    else
+    {
+        for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+        {
+            if (strcmp(directory_table[i].filename, dirs[count - 1]) == 0)
+            {
+                rmdir(directory_table[i].start_block, dirs, count + 1, size);
+                return;
+            }
+        }
+        printf("No such directory.\n");
+        return;
+    }
+}
+void dir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size)
+{
+    DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
+    // read directory table
+    readDirectoryTable(directory_table, block);
+    if (count == size)
+    {
+        printDirectoryTable(directory_table);
+        return;
+    }
+    else
+    {
+        for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+        {
+            if (strcmp(directory_table[i].filename, dirs[count]) == 0)
+            {
+                dir(directory_table[i].start_block, dirs, count + 1, size);
+                return;
+            }
+        }
+        printf("No such directory.\n");
+        return;
+    }
+}
+void parsePath(char *path, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int *count)
+{
+    // parse path using strtok '\\' and store in dirs
+    char *token = strtok(path, "/");
+    int i = 0;
+    while (token != NULL)
+    {
+        strcpy(dirs[i], token);
+        token = strtok(NULL, "/");
+        i++;
+    }
+    *count = i;
+}
+int findEmptyBlock()
+{
+    for (int i = 0; i < MAX_BLOCKS; i++)
+    {
+        if (fat_table[i].fat_entry == -2)
+        {
+            writeFATEntry(i, -1);
+            return i;
+        }
+    }
+    return -1;
+}
+void readDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], unsigned int block)
+{
+    // Read directory table from the following blocks
+    char *directory_table_ptr = fileSystem[block];
+    for (int i = 0; i < sizeof(DirectoryEntry) * MAX_DIRECTORY_ENTRIES / superblock.block_size; i++)
+    {
+        for (int j = 0; j < superblock.block_size / sizeof(DirectoryEntry); j++)
+        {
+            memcpy(&directory_table[i * (superblock.block_size / sizeof(DirectoryEntry)) + j], directory_table_ptr, sizeof(DirectoryEntry));
+            directory_table_ptr += sizeof(DirectoryEntry);
+        }
+    }
+}
+void createDirectoryTable(unsigned int block)
+{
+    DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
+    // Fill directory table with empty entries
+    for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+    {
+        directory_table[i].size = -1;
+        directory_table[i].start_block = -1;
+        strcpy(directory_table[i].filename, "");
+    }
+    // Write directory table to the following blocks
+    char *directory_table_ptr = fileSystem[block];
+    for (int i = 0; i < sizeof(DirectoryEntry) * MAX_DIRECTORY_ENTRIES / superblock.block_size; i++)
+    {
+        for (int j = 0; j < superblock.block_size / sizeof(DirectoryEntry); j++)
+        {
+            memcpy(directory_table_ptr, &directory_table[i * (superblock.block_size / sizeof(DirectoryEntry)) + j], sizeof(DirectoryEntry));
+            directory_table_ptr += sizeof(DirectoryEntry);
+        }
+    }
+}
+void writeDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], unsigned int block)
+{
+    // Write directory table to the following blocks
+    char *directory_table_ptr = fileSystem[block];
+    for (int i = 0; i < sizeof(DirectoryEntry) * MAX_DIRECTORY_ENTRIES / superblock.block_size; i++)
+    {
+        for (int j = 0; j < superblock.block_size / sizeof(DirectoryEntry); j++)
+        {
+            memcpy(directory_table_ptr, &directory_table[i * (superblock.block_size / sizeof(DirectoryEntry)) + j], sizeof(DirectoryEntry));
+            directory_table_ptr += sizeof(DirectoryEntry);
+        }
+    }
+}
+void putDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], DirectoryEntry entry)
+{
+    int i;
+    for (i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+    {
+        if (directory_table[i].size == -1)
+        {
+            directory_table[i] = entry;
+            break;
+        }
+    }
+    return;
+}
+void removeDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], int index)
+{
+    directory_table[index].size = -1;
+    directory_table[index].start_block = -1;
+    strcpy(directory_table[index].filename, "");
+    return;
+}
+int findDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], char *filename)
+{
+    for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+    {
+        if (strcmp(directory_table[i].filename, filename) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+void writeFileSystem(char *filename)
+{
+    FILE *file = fopen(filename, "wb");
+    // Write the file system to the file
+    for (int i = 0; i < MAX_BLOCKS; i++)
+    {
+        fwrite(fileSystem[i], sizeof(char), superblock.block_size, file);
+    }
+
+    fclose(file);
+}
+void writeFATEntry(unsigned int block, unsigned int value)
+{
+    fat_table[block].fat_entry = value;
+    // Write FAT table to the following blocks
+    char *fat_table_ptr = fileSystem[superblock.fat_table_pos];
+    for (int i = 0; i < sizeof(FATEntry) * MAX_BLOCKS / superblock.block_size; i++)
+    {
+        for (int j = 0; j < superblock.block_size / sizeof(FATEntry); j++)
+        {
+            memcpy(fat_table_ptr, &fat_table[i * (superblock.block_size / sizeof(FATEntry)) + j], sizeof(FATEntry));
+            fat_table_ptr += sizeof(FATEntry);
+        }
+    }
+}
+void printDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES])
+{
+    for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+    {
+        if (directory_table[i].size != -1)
+        {
+            printf("%s\n", directory_table[i].filename);
+        }
+    }
 }

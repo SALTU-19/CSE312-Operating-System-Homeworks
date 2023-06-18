@@ -34,6 +34,7 @@ void initializeFilesystem(int block_size, int fat_table_pos, int directory_table
 
 void createFileSystem(char *filename, int block_size)
 {
+
     char **fileSystem;
 
     int fat_table_size;
@@ -56,21 +57,35 @@ void createFileSystem(char *filename, int block_size)
 
     initializeFilesystem(block_size, fat_table_pos, directory_table_pos, data_blocks_pos);
 
-    // Create the root directory
-    DirectoryEntry root_dir;
-    strcpy(root_dir.filename, "\\");
-    root_dir.size = 0;
-    root_dir.last_mod_date = 0;
-    root_dir.last_mod_time = 0;
-    root_dir.start_block = superblock.root_directory_pos;
+    // Fill FAT table with empty entries
+    for (int i = 0; i < MAX_BLOCKS; i++)
+    {
+        if (i < data_blocks_pos)
+            fat_table[i].fat_entry = -1;
+        else
+            fat_table[i].fat_entry = -2;
+    }
+    // Fill directory table with empty entries
+    for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+    {
+        directory_table[i].size = -1;
+        directory_table[i].start_block = -1;
+        strcpy(directory_table[i].filename, "");
+    }
 
-    directory_table[0].size = root_dir.size;
-    directory_table[0].last_mod_date = root_dir.last_mod_date;
-    directory_table[0].last_mod_time = root_dir.last_mod_time;
-    directory_table[0].start_block = root_dir.start_block;
-    strcpy(directory_table[0].filename, root_dir.filename);
+    // // Create the root directory
+    // DirectoryEntry root_dir;
+    // strcpy(root_dir.filename, "\\");
+    // root_dir.size = 0;
+    // root_dir.start_block = superblock.root_directory_pos;
 
-    printf("Root directory filename: %s\n", directory_table[0].filename);
+    // directory_table[0].size = root_dir.size;
+    // directory_table[0].start_block = root_dir.start_block;
+    // strcpy(directory_table[0].filename, root_dir.filename);
+
+    printf("Root directory size: %d\n", directory_table[0].size);
+    printf("Fat table first entry: %d\n", fat_table[0].fat_entry);
+    printf("Supreblock block size: %d\n", superblock.block_size);
 
     // Put superblock in the first block
     char *superblock_ptr = fileSystem[0];
@@ -80,16 +95,22 @@ void createFileSystem(char *filename, int block_size)
     char *fat_table_ptr = fileSystem[fat_table_pos];
     for (int i = 0; i < fat_table_size / block_size; i++)
     {
-        memcpy(fat_table_ptr, &fat_table[i * (block_size / sizeof(FATEntry))], block_size);
-        fat_table_ptr += block_size;
+        for (int j = 0; j < superblock.block_size / sizeof(FATEntry); j++)
+        {
+            memcpy(fat_table_ptr, &fat_table[i * (superblock.block_size / sizeof(FATEntry)) + j], sizeof(FATEntry));
+            fat_table_ptr += sizeof(FATEntry);
+        }
     }
 
     // Put directory table in the following blocks
     char *directory_table_ptr = fileSystem[directory_table_pos];
     for (int i = 0; i < directory_table_size / block_size; i++)
     {
-        memcpy(directory_table_ptr, &directory_table[i * (block_size / sizeof(DirectoryEntry))], block_size);
-        directory_table_ptr += block_size;
+        for (int j = 0; j < superblock.block_size / sizeof(DirectoryEntry); j++)
+        {
+            memcpy(directory_table_ptr, &directory_table[i * (superblock.block_size / sizeof(DirectoryEntry)) + j], sizeof(DirectoryEntry));
+            directory_table_ptr += sizeof(DirectoryEntry);
+        }
     }
 
     FILE *file = fopen(filename, "wb");
