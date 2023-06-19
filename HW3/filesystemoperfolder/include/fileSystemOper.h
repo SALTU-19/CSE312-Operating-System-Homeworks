@@ -45,11 +45,12 @@ void rmdir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LEN
 void dir(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size);
 void write(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], char *linuxFile, int count, int size);
 void read(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], char *linuxFile, int count, int size);
+void del(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size);
 void parsePath(char *path, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int *count);
 void readDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], unsigned int block);
 void createDirectoryTable(unsigned int block);
 void createFile(char *buffer, unsigned int block);
-char *readFile(char *buffer, unsigned int block);
+char *readFile(char *buffer, unsigned int block, int buffer_size);
 void writeDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], unsigned int block);
 void putDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], DirectoryEntry entry);
 void removeDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], int index);
@@ -59,6 +60,6 @@ void writeFileSystem(char *filename);
 int findDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], char *filename);
 void printDirectoryTable(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES]);
 char *readLinuxFile(char *filename, char *buffer);
-void writeLinuxFile(char *filename, char *buffer);
+void writeLinuxFile(char *filename, char *buffe, int size);
 
 #endif // _FILESYSTEMOPER_H_

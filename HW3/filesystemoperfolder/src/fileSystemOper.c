@@ -189,7 +189,23 @@ void handleOperation(char *operation, char *param1, char *param2)
     }
     else if (strcmp(operation, "del") == 0)
     {
-        printf("del\n");
+        if (param1[0] != '/')
+        {
+            // print error
+            printf("Invalid path.\n");
+            exit(1);
+        }
+        if (param1[strlen(param1) - 1] == '/')
+        {
+            printf("Can not delete root directory.\n");
+            exit(1);
+        }
+        char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH];
+        int size = 0;
+        int block;
+        // parse path
+        parsePath(param1, dirs, &size);
+        del(superblock.root_directory_pos, dirs, 1, size);
     }
     else if (strcmp(operation, "dumpe2fs") == 0)
     {
@@ -337,7 +353,6 @@ void write(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LEN
         DirectoryEntry directory_entry;
         directory_entry.start_block = new_block;
         directory_entry.size = strlen(buffer);
-        printf("%d\n", directory_entry.size);
         strcpy(directory_entry.filename, dirs[count - 1]);
         putDirectoryEntry(directory_table, directory_entry);
         writeDirectoryTable(directory_table, block);
@@ -373,9 +388,8 @@ void read(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENG
         }
         int start_block = directory_table[index].start_block;
         char *buffer = malloc(sizeof(char) * directory_table[index].size);
-        buffer = readFile(buffer, start_block);
-        printf("%d\n", directory_table[index].size);
-        writeLinuxFile(linuxFile, buffer);
+        buffer = readFile(buffer, start_block, directory_table[index].size);
+        writeLinuxFile(linuxFile, buffer, directory_table[index].size);
         return;
     }
     else
@@ -385,6 +399,54 @@ void read(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENG
             if (strcmp(directory_table[i].filename, dirs[count - 1]) == 0)
             {
                 read(directory_table[i].start_block, dirs, linuxFile, count + 1, size);
+                return;
+            }
+        }
+        printf("No such directory.\n");
+        return;
+    }
+}
+void del(unsigned int block, char dirs[MAX_DIRECTORY_ENTRIES][MAX_FILENAME_LENGTH], int count, int size)
+{
+    DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES];
+    // read directory table
+    readDirectoryTable(directory_table, block);
+    if (count == size)
+    {
+        int index = findDirectoryEntry(directory_table, dirs[count - 1]);
+        if (index == -1)
+        {
+            printf("There is no such file.\n");
+            return;
+        }
+        int start_block = directory_table[index].start_block;
+        // edit Fat table
+        while (1)
+        {
+            if (fat_table[start_block].fat_entry == -1)
+            {
+                writeFATEntry(start_block, -2);
+                break;
+            }
+            else if (fat_table[start_block].fat_entry == -2)
+            {
+                break;
+            }
+            int temp = fat_table[start_block].fat_entry;
+            writeFATEntry(start_block, -2);
+            start_block = temp;
+        }
+        removeDirectoryEntry(directory_table, index);
+        writeDirectoryTable(directory_table, block);
+        return;
+    }
+    else
+    {
+        for (int i = 0; i < MAX_DIRECTORY_ENTRIES; i++)
+        {
+            if (strcmp(directory_table[i].filename, dirs[count - 1]) == 0)
+            {
+                del(directory_table[i].start_block, dirs, count + 1, size);
                 return;
             }
         }
@@ -486,13 +548,22 @@ void createFile(char *buffer, unsigned int block)
 {
     // Write file to the following blocks
     char *file_ptr = fileSystem[block];
-    memcpy(file_ptr, buffer, strlen(buffer));
+    int buffer_length = strlen(buffer);
+    for (int i = 0; i < buffer_length; i++)
+    {
+        file_ptr[i] = buffer[i];
+    }
+    file_ptr[buffer_length] = '\0'; // Add null-terminating character
 }
-char *readFile(char *buffer, unsigned int block)
+char *readFile(char *buffer, unsigned int block, int buffer_size)
 {
     // Read file from the following blocks
     char *file_ptr = fileSystem[block];
-    memcpy(buffer, file_ptr, strlen(file_ptr));
+    for (int i = 0; i < buffer_size; i++)
+    {
+        buffer[i] = file_ptr[i];
+    }
+    buffer[buffer_size] = '\0'; // Add null-terminating character
     return buffer;
 }
 void putDirectoryEntry(DirectoryEntry directory_table[MAX_DIRECTORY_ENTRIES], DirectoryEntry entry)
@@ -577,7 +648,7 @@ char *readLinuxFile(char *filename, char *buffer)
     fclose(file);
     return buffer;
 }
-void writeLinuxFile(char *filename, char *buffer)
+void writeLinuxFile(char *filename, char *buffer, int size)
 {
     FILE *file = fopen(filename, "wb");
     if (file == NULL)
@@ -585,6 +656,9 @@ void writeLinuxFile(char *filename, char *buffer)
         printf("Error: File not found\n");
         exit(1);
     }
-    fwrite(buffer, sizeof(char), strlen(buffer), file);
+    for (int i = 0; i < size; i++)
+    {
+        fwrite(&buffer[i], sizeof(char), 1, file);
+    }
     fclose(file);
 }

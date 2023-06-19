@@ -73,16 +73,6 @@ void createFileSystem(char *filename, int block_size)
         strcpy(directory_table[i].filename, "");
     }
 
-    // // Create the root directory
-    // DirectoryEntry root_dir;
-    // strcpy(root_dir.filename, "\\");
-    // root_dir.size = 0;
-    // root_dir.start_block = superblock.root_directory_pos;
-
-    // directory_table[0].size = root_dir.size;
-    // directory_table[0].start_block = root_dir.start_block;
-    // strcpy(directory_table[0].filename, root_dir.filename);
-
     printf("Root directory size: %d\n", directory_table[0].size);
     printf("Fat table first entry: %d\n", fat_table[0].fat_entry);
     printf("Supreblock block size: %d\n", superblock.block_size);
